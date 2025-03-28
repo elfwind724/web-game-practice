@@ -23,7 +23,7 @@ const Home: React.FC = () => {
       id: 'survivor',
       title: '幸存者',
       description: '从四面八方袭来的敌人中存活下来，收集经验升级，强化武器。',
-      imageUrl: `${basePath}images/2048-game.jpg`, // 临时使用现有图片
+      imageUrl: `${basePath}images/survivor-game.jpg`, // 使用幸存者游戏的专用图片
       path: '/games/survivor',
       hot: true,
       new: true
@@ -131,7 +131,7 @@ const Home: React.FC = () => {
             <a href="#" className="nav-link">最新游戏</a>
             <a href="#" className="nav-link">休闲游戏</a>
             <a href="#" className="nav-link">益智解谜</a>
-            <a href="#" className="nav-link">动作冒险</a>
+            <Link to="/games/survivor" className="nav-link">动作冒险</Link>
             <a href="#" className="nav-link">策略游戏</a>
           </div>
           <div className="nav-search">
@@ -150,9 +150,12 @@ const Home: React.FC = () => {
         backgroundBlendMode: 'overlay'
       }}>
         <div className="banner-content">
-          <h2>Teacher Feng Game World</h2>
-          <p>Fun and Creative Games for Everyone</p>
-          <Link to="/games/memory" className="banner-btn">Play Now</Link>
+          <h2>React游戏平台</h2>
+          <p>体验现代Web技术构建的有趣游戏</p>
+          <div className="banner-buttons">
+            <Link to="/games/memory" className="banner-btn">记忆游戏</Link>
+            <Link to="/games/survivor" className="banner-btn banner-btn-highlight">幸存者（新）</Link>
+          </div>
         </div>
       </div>
 

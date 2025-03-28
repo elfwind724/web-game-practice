@@ -152,6 +152,34 @@
   background-color: #45a049;
 }
 
+.banner-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.banner-btn-highlight {
+  background-color: #ff5722;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 87, 34, 0.7);
+  }
+  
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(255, 87, 34, 0);
+  }
+  
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 87, 34, 0);
+  }
+}
+
 /* 游戏卡片图片样式 */
 .game-card-img {
   position: relative;
