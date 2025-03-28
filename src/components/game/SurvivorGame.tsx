@@ -1,7 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 // @ts-ignore 忽略模块导入错误
 import useGameLoop from '../../hooks/useGameLoop';
-import '../../styles/SurvivorGame.css';
+import './SurvivorGame.css';
+
+// 资源路径
+const playerImagePath = '/assets/images/survivor/player.png';
+const bulletEffectsPath = '/assets/images/survivor/bullet_effects.png';
 
 // 游戏状态类型
 interface GameState {
@@ -83,7 +87,7 @@ interface KeyState {
 }
 
 const SurvivorGame: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerImageRef = useRef<HTMLImageElement | null>(null);
   const bulletImageRef = useRef<HTMLImageElement | null>(null);
   const [gameState, setGameState] = useState<GameState>({
@@ -130,13 +134,6 @@ const SurvivorGame: React.FC = () => {
     d: false,
   });
 
-  // 获取基础路径
-  const basePath = import.meta.env.BASE_URL;
-
-  // 资源路径
-  const playerImagePath = `${basePath}images/survivor-game.jpg`;
-  const bulletEffectsPath = `${basePath}images/bullet-effects.png`;
-
   // 加载图片
   useEffect(() => {
     // 创建并加载玩家图片
@@ -168,43 +165,87 @@ const SurvivorGame: React.FC = () => {
       canvas.focus();
     }
 
-    // 添加键盘事件监听（直接使用document而不是window）
+    // 添加键盘事件监听（使用捕获模式确保事件被捕获）
     const handleKeyDown = (e: KeyboardEvent) => {
       console.log('键盘按下:', e.key);
+      let keyChanged = false;
+      
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
-        setKeyState(prev => ({ ...prev, w: true }));
+        setKeyState(prev => {
+          keyChanged = prev.w !== true;
+          return { ...prev, w: true };
+        });
       } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
-        setKeyState(prev => ({ ...prev, a: true }));
+        setKeyState(prev => {
+          keyChanged = prev.a !== true;
+          return { ...prev, a: true };
+        });
       } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
-        setKeyState(prev => ({ ...prev, s: true }));
+        setKeyState(prev => {
+          keyChanged = prev.s !== true;
+          return { ...prev, s: true };
+        });
       } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-        setKeyState(prev => ({ ...prev, d: true }));
+        setKeyState(prev => {
+          keyChanged = prev.d !== true;
+          return { ...prev, d: true };
+        });
       }
+      
+      if (keyChanged) {
+        console.log('键盘状态已更新(DOWN):', e.key);
+      }
+      
       // 防止默认行为，如页面滚动
       e.preventDefault();
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       console.log('键盘释放:', e.key);
+      let keyChanged = false;
+      
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
-        setKeyState(prev => ({ ...prev, w: false }));
+        setKeyState(prev => {
+          keyChanged = prev.w !== false;
+          return { ...prev, w: false };
+        });
       } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
-        setKeyState(prev => ({ ...prev, a: false }));
+        setKeyState(prev => {
+          keyChanged = prev.a !== false;
+          return { ...prev, a: false };
+        });
       } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
-        setKeyState(prev => ({ ...prev, s: false }));
+        setKeyState(prev => {
+          keyChanged = prev.s !== false; 
+          return { ...prev, s: false };
+        });
       } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-        setKeyState(prev => ({ ...prev, d: false }));
+        setKeyState(prev => {
+          keyChanged = prev.d !== false;
+          return { ...prev, d: false };
+        });
       }
+      
+      if (keyChanged) {
+        console.log('键盘状态已更新(UP):', e.key);
+      }
+      
       // 防止默认行为
       e.preventDefault();
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
+    // 通过添加冒泡和捕获阶段两种监听来确保键盘事件被捕获
+    document.addEventListener('keydown', handleKeyDown, true); // 捕获阶段
+    document.addEventListener('keyup', handleKeyUp, true); // 捕获阶段
+    window.addEventListener('keydown', handleKeyDown); // 冒泡阶段备份
+    window.addEventListener('keyup', handleKeyUp); // 冒泡阶段备份
 
+    // 在组件卸载时清除事件监听器
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keyup', handleKeyUp, true);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
   
@@ -263,7 +304,7 @@ const SurvivorGame: React.FC = () => {
         playerPos: { x: gameState.player.x, y: gameState.player.y },
         enemies: gameState.enemies.length,
         bullets: gameState.bullets.length,
-        keyState
+        keyState: JSON.stringify(keyState) // 详细打印键盘状态
       });
     }
 
@@ -272,29 +313,35 @@ const SurvivorGame: React.FC = () => {
     let playerY = gameState.player.y;
     const moveSpeed = gameState.player.speed;
 
+    // 强制打印当前键盘状态，帮助调试
+    console.log("键盘状态:", keyState, "位置:", playerX, playerY);
+
     // 使用键盘状态更新玩家位置
     const diagonalMovement = (keyState.w || keyState.s) && (keyState.a || keyState.d);
     const diagonalFactor = diagonalMovement ? 0.7071 : 1; // 约等于 1/sqrt(2)，对角线移动时的速度调整
     
     if (keyState.w) {
       playerY -= moveSpeed * diagonalFactor;
-      // 调试信息
       console.log('玩家向上移动', {playerY, moveSpeed});
     }
     if (keyState.s) {
       playerY += moveSpeed * diagonalFactor;
-      // 调试信息
       console.log('玩家向下移动', {playerY, moveSpeed});
     }
     if (keyState.a) {
       playerX -= moveSpeed * diagonalFactor;
-      // 调试信息
       console.log('玩家向左移动', {playerX, moveSpeed});
     }
     if (keyState.d) {
       playerX += moveSpeed * diagonalFactor;
-      // 调试信息
       console.log('玩家向右移动', {playerX, moveSpeed});
+    }
+
+    // 手动触发键盘调试 - 如果30秒内没有输入，自动模拟向右移动
+    if (updatedGameTime > 2000 && updatedGameTime % 3000 < normalizedDeltaTime) {
+      console.log("尝试模拟键盘输入: D键");
+      // 临时测试：模拟按键
+      playerX += 50;
     }
 
     // 限制玩家在画布内
@@ -951,9 +998,6 @@ const SurvivorGame: React.FC = () => {
     );
   };
 
-  // 添加lastRenderTimeRef变量用于FPS计算
-  const lastRenderTimeRef = useRef<number>(0);
-
   // 处理升级选择
   const handleLevelUpChoice = (optionId: string) => {
     // 找到选中的选项
@@ -1171,126 +1215,48 @@ const SurvivorGame: React.FC = () => {
     });
   };
 
-  // 添加鼠标/触摸控制
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    // 添加虚拟方向控制器
-    const addVirtualController = () => {
-      // 创建虚拟控制器容器
-      const controllerContainer = document.createElement('div');
-      controllerContainer.className = 'virtual-controller';
-      controllerContainer.style.position = 'fixed';
-      controllerContainer.style.bottom = '20px';
-      controllerContainer.style.left = '20px';
-      controllerContainer.style.zIndex = '100';
-      controllerContainer.style.userSelect = 'none';
-      
-      // 上下左右按钮
-      const createButton = (text: string, key: 'w' | 'a' | 's' | 'd', top: string, left: string) => {
-        const button = document.createElement('button');
-        button.textContent = text;
-        button.style.position = 'absolute';
-        button.style.top = top;
-        button.style.left = left;
-        button.style.width = '60px';
-        button.style.height = '60px';
-        button.style.borderRadius = '30px';
-        button.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-        button.style.border = 'none';
-        button.style.color = 'white';
-        button.style.fontSize = '24px';
-        button.style.fontWeight = 'bold';
-        
-        // 触摸事件
-        button.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          setKeyState(prev => ({ ...prev, [key]: true }));
-        });
-        
-        button.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          setKeyState(prev => ({ ...prev, [key]: false }));
-        });
-        
-        // 鼠标事件
-        button.addEventListener('mousedown', () => {
-          setKeyState(prev => ({ ...prev, [key]: true }));
-        });
-        
-        button.addEventListener('mouseup', () => {
-          setKeyState(prev => ({ ...prev, [key]: false }));
-        });
-        
-        button.addEventListener('mouseleave', () => {
-          setKeyState(prev => ({ ...prev, [key]: false }));
-        });
-        
-        return button;
-      };
-      
-      // 创建各方向按钮
-      const upButton = createButton('↑', 'w', '0', '60px');
-      const leftButton = createButton('←', 'a', '60px', '0');
-      const downButton = createButton('↓', 's', '60px', '60px');
-      const rightButton = createButton('→', 'd', '60px', '120px');
-      
-      // 添加到容器
-      controllerContainer.appendChild(upButton);
-      controllerContainer.appendChild(leftButton);
-      controllerContainer.appendChild(downButton);
-      controllerContainer.appendChild(rightButton);
-      
-      // 添加到文档
-      document.body.appendChild(controllerContainer);
-      
-      // 清理函数
-      return () => {
-        document.body.removeChild(controllerContainer);
-      };
-    };
-    
-    // 检测是否为触摸设备
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    
-    // 如果是触摸设备，添加虚拟控制器
-    let cleanup: (() => void) | null = null;
-    if (isTouchDevice) {
-      cleanup = addVirtualController();
-    }
-    
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, []);
-
   // 使用游戏循环
   useGameLoop(updateGame, renderGame);
 
-  // 确保canvas获得焦点的处理函数
-  const handleContainerClick = () => {
-    if (canvasRef.current) {
-      canvasRef.current.focus();
-      console.log('Canvas已获得焦点');
-    }
-  };
-
   return (
-    <div className="survivor-game-container" onClick={handleContainerClick}>
-      <canvas 
-        ref={canvasRef} 
-        className="game-canvas" 
-        tabIndex={0} 
+    <div className="survivor-game-container">
+      <div className="game-info">
+        <div>Health: {gameState.player.health}</div>
+        <div>Score: {gameState.score}</div>
+        <div className="debug-info">
+          Position: ({gameState.player.x.toFixed(1)}, {gameState.player.y.toFixed(1)})
+          <br />
+          Keys: {Object.entries(keyState).filter(([_, pressed]) => pressed).map(([key]) => key).join(', ') || 'None'}
+        </div>
+      </div>
+      <canvas
+        ref={canvasRef}
+        width={window.innerWidth}
+        height={window.innerHeight}
+        tabIndex={0}
+        onFocus={() => console.log('Canvas已获得焦点')}
+        onClick={() => {
+          // 点击时获取焦点以确保键盘事件的正常处理
+          canvasRef.current?.focus();
+          console.log('Canvas被点击，已获取焦点');
+        }}
       />
-      
-      {/* 游戏控制提示 */}
-      <div className="game-controls-info">
-        <h3>幸存者游戏</h3>
-        <p>使用 WASD 或方向键移动角色</p>
-        <p>自动向最近的敌人发射子弹</p>
-        <p>收集经验值提升等级</p>
-        <p>击败敌人获得分数</p>
+      <div className="game-controls">
+        <h3>控制说明:</h3>
+        <p>使用 WASD 或方向键控制角色移动</p>
+        <p>自动向最近的敌人射击</p>
+        <button 
+          onClick={() => {
+            setKeyState(prev => ({ ...prev, w: true }));
+            setTimeout(() => {
+              setKeyState(prev => ({ ...prev, w: false }));
+            }, 1000);
+            console.log('测试向上移动按钮被点击');
+          }} 
+          className="test-button"
+        >
+          测试向上移动
+        </button>
       </div>
       
       {/* 游戏结束UI */}
