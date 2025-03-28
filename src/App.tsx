@@ -58,7 +58,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
+      <Router basename="/web-game-practice">
         <div className="app-container">
           <main>
             <Routes>

@@ -16,7 +16,7 @@ interface MemoryGameProps {
 // 精美的表情符号集合
 const emojis = ['🍎', '🍌', '🍇', '🍊', '🍓', '🍉', '🍍', '🥝', '🍒', '🥭', '🍑', '🍈', '🍏'];
 
-const MemoryGame: React.FC<MemoryGameProps> = ({ windowWidth, windowHeight }) => {
+const MemoryGame: React.FC<MemoryGameProps> = ({ windowWidth }) => {
   const [cards, setCards] = useState<CardItem[]>([]);
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [matchedPairs, setMatchedPairs] = useState<number>(0);

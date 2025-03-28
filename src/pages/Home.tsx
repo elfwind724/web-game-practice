@@ -1,16 +1,21 @@
 import React from 'react';
+// @ts-ignore
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card';
+// @ts-ignore
 import Button from '../components/ui/Button';
 import { Link } from 'react-router-dom';
 
 const Home: React.FC = () => {
+  // 获取基础路径
+  const basePath = import.meta.env.BASE_URL;
+
   // 热门推荐游戏
   const featuredGames = [
     {
       id: 'memory',
       title: '记忆游戏',
       description: '翻转卡片，找到配对的图案。训练你的记忆力和观察力。',
-      imageUrl: '/images/memory-game.svg',
+      imageUrl: `${basePath}images/memory-game.jpg`,
       path: '/games/memory',
       hot: true
     },
@@ -18,7 +23,7 @@ const Home: React.FC = () => {
       id: 'puzzle',
       title: '拼图挑战',
       description: '移动方块，还原图像。挑战你的空间思维能力。',
-      imageUrl: '/images/puzzle-game.svg',
+      imageUrl: `${basePath}images/puzzle-game.jpg`,
       path: '/',
       comingSoon: true
     },
@@ -26,7 +31,7 @@ const Home: React.FC = () => {
       id: 'tetris',
       title: '俄罗斯方块',
       description: '经典的俄罗斯方块游戏，考验你的反应和策略。',
-      imageUrl: '/images/tetris-game.svg',
+      imageUrl: `${basePath}images/tetris-game.jpg`,
       path: '/',
       comingSoon: true
     },
@@ -34,7 +39,7 @@ const Home: React.FC = () => {
       id: 'snake',
       title: '贪吃蛇',
       description: '控制蛇吃食物并成长，但不要撞到墙或自己的身体。',
-      imageUrl: '/images/snake-game.svg',
+      imageUrl: `${basePath}images/snake-game.jpg`,
       path: '/',
       comingSoon: true
     },
@@ -42,7 +47,7 @@ const Home: React.FC = () => {
       id: '2048',
       title: '2048',
       description: '合并方块，达到2048。一个经典的数字益智游戏。',
-      imageUrl: '/images/2048-game.svg',
+      imageUrl: `${basePath}images/2048-game.jpg`,
       path: '/',
       comingSoon: true
     }
@@ -54,7 +59,7 @@ const Home: React.FC = () => {
       id: 'memory-pro',
       title: '高级记忆游戏',
       description: '记忆游戏的升级版，更多挑战和难度选择。',
-      imageUrl: '/images/memory-pro.svg',
+      imageUrl: `${basePath}images/memory-pro-game.jpg`,
       path: '/games/memory',
       new: true
     },
@@ -62,7 +67,7 @@ const Home: React.FC = () => {
       id: 'word-puzzle',
       title: '单词找茬',
       description: '找出隐藏在字母网格中的单词，挑战你的词汇量。',
-      imageUrl: '/images/word-puzzle.svg',
+      imageUrl: `${basePath}images/word-puzzle-game.jpg`,
       path: '/',
       comingSoon: true
     },
@@ -70,7 +75,7 @@ const Home: React.FC = () => {
       id: 'sudoku',
       title: '数独',
       description: '填充9x9网格，使每行、每列和每个3x3子网格包含1-9的数字。',
-      imageUrl: '/images/sudoku-game.svg',
+      imageUrl: `${basePath}images/sudoku-game.jpg`,
       path: '/',
       comingSoon: true
     }
@@ -82,7 +87,7 @@ const Home: React.FC = () => {
       id: 'memory',
       title: '记忆游戏',
       description: '翻转卡片，找到配对的图案。训练你的记忆力和观察力。',
-      imageUrl: '/images/memory-game.svg',
+      imageUrl: `${basePath}images/memory-game-2.jpg`,
       path: '/games/memory',
       rating: 4.8
     },
@@ -90,7 +95,7 @@ const Home: React.FC = () => {
       id: 'coming-soon-1',
       title: '敬请期待',
       description: '更多游戏正在开发中...',
-      imageUrl: '/images/coming-soon.svg',
+      imageUrl: `${basePath}images/coming-soon-2.jpg`,
       path: '/',
       comingSoon: true
     },
@@ -98,7 +103,7 @@ const Home: React.FC = () => {
       id: 'coming-soon-2',
       title: '敬请期待',
       description: '更多游戏正在开发中...',
-      imageUrl: '/images/coming-soon.svg',
+      imageUrl: `${basePath}images/coming-soon-2.jpg`,
       path: '/',
       comingSoon: true
     }
@@ -128,7 +133,13 @@ const Home: React.FC = () => {
       </nav>
 
       {/* 主横幅 */}
-      <div className="main-banner">
+      <div className="main-banner" style={{
+        backgroundImage: `url(${basePath}images/banner-bg.jpg)`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backgroundBlendMode: 'overlay'
+      }}>
         <div className="banner-content">
           <h2>欢迎来到React游戏平台</h2>
           <p>体验现代Web技术构建的有趣游戏</p>
