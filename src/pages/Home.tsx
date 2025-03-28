@@ -4,6 +4,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 // @ts-ignore
 import Button from '../components/ui/Button';
 import { Link } from 'react-router-dom';
+import './Home.css';
 
 const Home: React.FC = () => {
   // 获取基础路径
@@ -119,7 +120,37 @@ const Home: React.FC = () => {
   ];
 
   return (
-    <div className="game-platform-container">
+    <div className="home-container">
+      <nav className="main-nav">
+        <h1>Web Game Practice</h1>
+        <div className="nav-links">
+          <Link to="/games/survivor" className="nav-link">幸存者</Link>
+        </div>
+      </nav>
+
+      <div className="banner">
+        <h2>欢迎来到Web游戏练习</h2>
+        <p>探索各种有趣的Web游戏</p>
+        <Link to="/games/survivor" className="banner-btn banner-btn-highlight">
+          立即开始幸存者游戏！
+        </Link>
+      </div>
+
+      <div className="game-categories">
+        <section>
+          <h2>动作冒险</h2>
+          <div className="game-grid">
+            <Link to="/games/survivor" className="game-card">
+              <img src="assets/images/survivor/survivor-game.jpg" alt="幸存者游戏" />
+              <div className="game-info">
+                <h3>幸存者</h3>
+                <p>在无尽的敌人中生存下来！</p>
+              </div>
+            </Link>
+          </div>
+        </section>
+      </div>
+
       {/* 顶部导航 */}
       <nav className="main-nav">
         <div className="nav-container">
