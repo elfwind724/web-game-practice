@@ -1,0 +1,509 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Web Game Practice Project Rules
+
+## 项目结构
+```
+src/
+├── components/         # 通用组件
+│   ├── ui/            # UI组件（按钮、菜单等）
+│   └── game/          # 游戏相关组件
+├── games/             # 游戏核心逻辑
+│   └── survivor/      # 幸存者游戏
+│       ├── core/      # 核心游戏逻辑
+│       ├── entities/  # 游戏实体（玩家、敌人等）
+│       ├── systems/   # 游戏系统（渲染、物理、碰撞等）
+│       └── utils/     # 工具函数
+├── hooks/             # 自定义Hooks
+├── pages/             # 页面组件
+├── assets/            # 静态资源
+└── utils/             # 通用工具函数
+
+public/
+└── assets/           # 公共资源
+    └── games/        # 游戏资源
+        └── survivor/ # 幸存者游戏资源
+```
+
+## 游戏开发规范
+
+### 1. 游戏循环与状态管理
+- 使用 `requestAnimationFrame` 实现游戏循环
+- 状态更新和渲染分离
+- 使用 TypeScript 严格类型检查
+- 游戏状态使用不可变数据模式
+
+```typescript
+interface GameLoop {
+  start(): void;
+  stop(): void;
+  pause(): void;
+  resume(): void;
+}
+
+interface GameState {
+  readonly entities: ReadonlyArray<Entity>;
+  readonly time: number;
+  readonly deltaTime: number;
+}
+```
+
+### 2. 输入处理
+- 统一的输入管理器
+- 支持键盘、鼠标和触摸事件
+- 可配置的按键映射
+- 输入状态去抖动处理
+
+```typescript
+interface InputManager {
+  isKeyPressed(key: string): boolean;
+  getMousePosition(): Vector2;
+  addInputMapping(action: string, keys: string[]): void;
+}
+```
+
+### 3. 渲染系统
+- Canvas 渲染优化
+- 使用离屏 Canvas 进行缓冲
+- 视口和相机系统
+- 分层渲染（背景、游戏对象、UI）
+
+```typescript
+interface Renderer {
+  clear(): void;
+  begin(): void;
+  end(): void;
+  drawSprite(sprite: Sprite, position: Vector2): void;
+  drawText(text: string, position: Vector2, options: TextOptions): void;
+}
+```
+
+### 4. 实体组件系统 (ECS)
+- 组件化设计
+- 实体管理器
+- 系统更新循环
+- 组件数据与行为分离
+
+```typescript
+interface Entity {
+  readonly id: string;
+  readonly components: Map<string, Component>;
+  addComponent(component: Component): void;
+  removeComponent(name: string): void;
+}
+
+interface System {
+  update(entities: ReadonlyArray<Entity>, deltaTime: number): void;
+}
+```
+
+### 5. 碰撞检测
+- 空间分区（四叉树）
+- 广义和精确碰撞检测分离
+- 碰撞响应系统
+- 可配置的碰撞层级
+
+```typescript
+interface Collider {
+  bounds: BoundingBox;
+  layer: number;
+  mask: number;
+  onCollision(other: Collider): void;
+}
+```
+
+### 6. 资源管理
+- 资源预加载
+- 异步加载管理
+- 资源缓存
+- 内存管理
+
+```typescript
+interface AssetManager {
+  load(url: string): Promise<Asset>;
+  preload(urls: string[]): Promise<void>;
+  get(url: string): Asset | undefined;
+  clear(): void;
+}
+```
+
+### 7. 调试工具
+- 性能监控
+- 调试绘制
+- 状态检查器
+- 日志系统
+
+```typescript
+interface DebugTools {
+  showFPS(): void;
+  showColliders(): void;
+  showGrid(): void;
+  logState(): void;
+}
+```
+
+### 8. 性能优化
+- 对象池
+- 帧率控制
+- 渲染优化
+- 内存管理
+
+```typescript
+interface ObjectPool<T> {
+  acquire(): T;
+  release(obj: T): void;
+  prewarm(count: number): void;
+}
+```
+
+### 9. 音频系统
+- 音频管理器
+- 音量控制
+- 音效池
+- 背景音乐管理
+
+```typescript
+interface AudioManager {
+  playSound(id: string): void;
+  playMusic(id: string): void;
+  setVolume(type: 'sound' | 'music', volume: number): void;
+}
+```
+
+### 10. 存档系统
+- 游戏进度保存
+- 配置持久化
+- 存档加密
+- 自动保存
+
+```typescript
+interface SaveSystem {
+  save(slot: number, data: GameSave): Promise<void>;
+  load(slot: number): Promise<GameSave>;
+  autoSave(): void;
+}
+```
+
+## 代码风格
+
+### TypeScript
+- 使用严格模式
+- 明确的类型定义
+- 接口优先设计
+- 不允许 any 类型
+
+### 命名规范
+- 类名：PascalCase
+- 接口名：PascalCase，以 I 开头
+- 方法名：camelCase
+- 私有属性：以 _ 开头
+
+### 文档规范
+- JSDoc 注释
+- 必要的接口文档
+- 示例代码
+- 版本变更记录
+
+### 测试规范
+- 单元测试
+- 性能测试
+- 集成测试
+- 测试覆盖率要求
+
+## 版本控制
+- 语义化版本
+- 分支管理策略
+- 提交信息规范
+- 代码审查流程
+
+## 发布流程
+- 构建优化
+- 资源压缩
+- 兼容性测试
+- 性能基准测试
+
+## 代码编写规范
+
+### 1. 通用原则
+- 遵循 SOLID 设计原则
+- 保持代码简单清晰（KISS 原则）
+- 避免重复代码（DRY 原则）
+- 优先使用组合而非继承
+- 函数单一职责
+
+### 2. 函数编写规范
+```typescript
+// ✅ 好的做法
+function calculateDamage(
+  baseDamage: number, 
+  multiplier: number, 
+  defense: number
+): number {
+  // 参数验证
+  if (baseDamage < 0 || multiplier < 0 || defense < 0) {
+    throw new Error('Invalid parameters');
+  }
+  
+  // 单一职责，逻辑清晰
+  const rawDamage = baseDamage * multiplier;
+  const finalDamage = Math.max(0, rawDamage - defense);
+  
+  return finalDamage;
+}
+
+// ❌ 不好的做法
+function damage(a: number, b: number, c: number) {
+  return a * b - c;
+}
+```
+
+### 3. 类编写规范
+```typescript
+// ✅ 好的做法
+class Player {
+  private readonly _maxHealth: number;
+  private _currentHealth: number;
+  
+  constructor(maxHealth: number) {
+    this._maxHealth = maxHealth;
+    this._currentHealth = maxHealth;
+  }
+  
+  public takeDamage(amount: number): void {
+    this._currentHealth = Math.max(0, this._currentHealth - amount);
+  }
+  
+  public heal(amount: number): void {
+    this._currentHealth = Math.min(this._maxHealth, this._currentHealth + amount);
+  }
+  
+  public get healthPercentage(): number {
+    return this._currentHealth / this._maxHealth;
+  }
+}
+
+// ❌ 不好的做法
+class PlayerClass {
+  health = 100;
+  maxHealth = 100;
+  
+  damage(x: number) {
+    this.health -= x;
+    if (this.health < 0) this.health = 0;
+  }
+}
+```
+
+### 4. 接口和类型定义规范
+```typescript
+// ✅ 好的做法
+interface IGameEntity {
+  readonly id: string;
+  readonly position: Vector2;
+  readonly bounds: BoundingBox;
+  
+  update(deltaTime: number): void;
+  render(context: CanvasRenderingContext2D): void;
+}
+
+type GameConfig = {
+  readonly width: number;
+  readonly height: number;
+  readonly debug?: boolean;
+};
+
+// ❌ 不好的做法
+interface Thing {
+  x: number;
+  y: number;
+  do(): void;
+}
+```
+
+### 5. 错误处理规范
+```typescript
+// ✅ 好的做法
+class AssetLoader {
+  public async loadAsset(path: string): Promise<GameAsset> {
+    try {
+      const response = await fetch(path);
+      if (!response.ok) {
+        throw new AssetLoadError(`Failed to load asset: ${path}`);
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error('Asset loading failed', { path, error });
+      throw error;
+    }
+  }
+}
+
+// ❌ 不好的做法
+async function load(path: string) {
+  const res = await fetch(path);
+  return res.json();
+}
+```
+
+### 6. 注释规范
+```typescript
+/**
+ * 表示游戏中的一个可交互实体
+ * @implements {IGameEntity}
+ */
+class GameObject implements IGameEntity {
+  /** 实体的唯一标识符 */
+  private readonly _id: string;
+  
+  /**
+   * 更新实体状态
+   * @param deltaTime - 上一帧到当前帧的时间间隔（毫秒）
+   * @throws {GameError} 当更新失败时抛出
+   */
+  public update(deltaTime: number): void {
+    // 实现更新逻辑
+  }
+}
+```
+
+### 7. 文件组织规范
+```typescript
+// config.ts
+export interface IGameConfig {
+  // ...配置接口
+}
+
+// constants.ts
+export const GAME_CONSTANTS = {
+  // ...游戏常量
+} as const;
+
+// types.ts
+export type Vector2 = {
+  x: number;
+  y: number;
+};
+
+// index.ts
+export * from './config';
+export * from './constants';
+export * from './types';
+```
+
+### 8. 状态管理规范
+```typescript
+// ✅ 好的做法
+class GameState {
+  private readonly _state: Readonly<IGameState>;
+  
+  public update(deltaTime: number): void {
+    // 创建新的状态而不是修改现有状态
+    this._state = {
+      ...this._state,
+      time: this._state.time + deltaTime,
+      entities: this.updateEntities(deltaTime)
+    };
+  }
+  
+  private updateEntities(deltaTime: number): ReadonlyArray<IGameEntity> {
+    return this._state.entities.map(entity => entity.update(deltaTime));
+  }
+}
+
+// ❌ 不好的做法
+class BadGameState {
+  public entities: any[] = [];
+  public time = 0;
+  
+  update(dt: number) {
+    this.time += dt;
+    this.entities.forEach(e => e.update());
+  }
+}
+```
+
+### 9. 性能优化规范
+```typescript
+// ✅ 好的做法
+class RenderSystem {
+  private readonly _offscreenCanvas: OffscreenCanvas;
+  
+  public render(entities: ReadonlyArray<IGameEntity>): void {
+    // 使用离屏渲染
+    const ctx = this._offscreenCanvas.getContext('2d');
+    if (!ctx) return;
+    
+    // 批量处理绘制操作
+    ctx.save();
+    entities.forEach(entity => entity.render(ctx));
+    ctx.restore();
+    
+    // 一次性绘制到主画布
+    this.commitToMainCanvas();
+  }
+}
+
+// ❌ 不好的做法
+function render(things: any[]) {
+  things.forEach(thing => {
+    ctx.save();
+    thing.draw();
+    ctx.restore();
+  });
+}
+```
+
+### 10. 调试与日志规范
+```typescript
+// ✅ 好的做法
+class Logger {
+  private static readonly LOG_LEVELS = ['DEBUG', 'INFO', 'WARN', 'ERROR'] as const;
+  
+  public log(
+    level: typeof Logger.LOG_LEVELS[number],
+    message: string,
+    data?: Record<string, unknown>
+  ): void {
+    if (!this.shouldLog(level)) return;
+    
+    console.log(
+      `[${new Date().toISOString()}] [${level}] ${message}`,
+      data ?? ''
+    );
+  }
+}
+
+// ❌ 不好的做法
+function log(msg: string) {
+  console.log(msg);
+}
+```
+
+## 代码审查清单
+1. 功能性
+   - 代码是否实现了预期功能？
+   - 是否处理了边界情况？
+   - 是否有适当的错误处理？
+
+2. 可维护性
+   - 代码结构是否清晰？
+   - 命名是否有意义？
+   - 是否有适当的注释？
+
+3. 性能
+   - 是否有明显的性能问题？
+   - 是否有不必要的计算？
+   - 是否正确使用了缓存？
+
+4. 安全性
+   - 是否验证了输入？
+   - 是否安全地处理了异常？
+   - 是否有潜在的内存泄漏？
+
+5. 测试
+   - 是否有单元测试？
+   - 测试是否覆盖了关键路径？
+   - 是否测试了错误情况？ 
