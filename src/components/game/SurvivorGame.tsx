@@ -4,8 +4,8 @@ import useGameLoop from '../../hooks/useGameLoop';
 import './SurvivorGame.css';
 
 // 资源路径
-const playerImagePath = '/assets/images/survivor/player.png';
-const bulletEffectsPath = '/assets/images/survivor/bullet_effects.png';
+const playerImagePath = './assets/images/survivor/player.png';
+const bulletEffectsPath = './assets/images/survivor/bullet_effects.png';
 
 // 游戏状态类型
 interface GameState {
@@ -76,6 +76,7 @@ interface GameState {
     projectileCount: number;
     projectileSpread: number;
   }[];
+  lastInputTime: number;
 }
 
 // 按键状态类型
@@ -125,6 +126,7 @@ const SurvivorGame: React.FC = () => {
         projectileSpread: 0,
       },
     ],
+    lastInputTime: 0,
   });
 
   const [keyState, setKeyState] = useState<KeyState>({
@@ -256,23 +258,21 @@ const SurvivorGame: React.FC = () => {
     
     // 函数：调整Canvas大小
     const resizeCanvas = () => {
+      // 设置Canvas尺寸为全屏
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      console.log(`Canvas尺寸已调整为: ${canvas.width}x${canvas.height}`);
       
-      // 在尺寸变化后尝试重新渲染（不依赖于gameLoop）
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // 简单绘制一个背景，确保画布尺寸正确
-        ctx.fillStyle = '#111111';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // 绘制debug信息
-        ctx.fillStyle = 'white';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(`Canvas: ${canvas.width} x ${canvas.height}`, canvas.width / 2, canvas.height / 2);
-      }
+      // 更新游戏状态中的玩家位置到屏幕中心
+      setGameState(prevState => ({
+        ...prevState,
+        player: {
+          ...prevState.player,
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        }
+      }));
+      
+      console.log(`Canvas尺寸已调整为: ${canvas.width}x${canvas.height}`);
     };
     
     // 初始尺寸设置
@@ -311,37 +311,68 @@ const SurvivorGame: React.FC = () => {
     // 更新玩家位置
     let playerX = gameState.player.x;
     let playerY = gameState.player.y;
-    const moveSpeed = gameState.player.speed;
-
-    // 强制打印当前键盘状态，帮助调试
-    console.log("键盘状态:", keyState, "位置:", playerX, playerY);
+    
+    // 增加移动速度，使移动更明显
+    const moveSpeed = gameState.player.speed * 1.5;
 
     // 使用键盘状态更新玩家位置
     const diagonalMovement = (keyState.w || keyState.s) && (keyState.a || keyState.d);
     const diagonalFactor = diagonalMovement ? 0.7071 : 1; // 约等于 1/sqrt(2)，对角线移动时的速度调整
     
+    // 记录是否有移动输入
+    let hasMovementInput = false;
+    
     if (keyState.w) {
-      playerY -= moveSpeed * diagonalFactor;
-      console.log('玩家向上移动', {playerY, moveSpeed});
+      playerY -= moveSpeed * diagonalFactor * (normalizedDeltaTime / 16);
+      hasMovementInput = true;
     }
     if (keyState.s) {
-      playerY += moveSpeed * diagonalFactor;
-      console.log('玩家向下移动', {playerY, moveSpeed});
+      playerY += moveSpeed * diagonalFactor * (normalizedDeltaTime / 16);
+      hasMovementInput = true;
     }
     if (keyState.a) {
-      playerX -= moveSpeed * diagonalFactor;
-      console.log('玩家向左移动', {playerX, moveSpeed});
+      playerX -= moveSpeed * diagonalFactor * (normalizedDeltaTime / 16);
+      hasMovementInput = true;
     }
     if (keyState.d) {
-      playerX += moveSpeed * diagonalFactor;
-      console.log('玩家向右移动', {playerX, moveSpeed});
+      playerX += moveSpeed * diagonalFactor * (normalizedDeltaTime / 16);
+      hasMovementInput = true;
+    }
+    
+    // 如果有按键输入，记录并打印移动信息
+    if (hasMovementInput) {
+      console.log('玩家移动: ', {
+        from: { x: gameState.player.x, y: gameState.player.y },
+        to: { x: playerX, y: playerY },
+        moveSpeed,
+        deltaTime: normalizedDeltaTime
+      });
     }
 
-    // 手动触发键盘调试 - 如果30秒内没有输入，自动模拟向右移动
-    if (updatedGameTime > 2000 && updatedGameTime % 3000 < normalizedDeltaTime) {
-      console.log("尝试模拟键盘输入: D键");
-      // 临时测试：模拟按键
-      playerX += 50;
+    // 手动触发键盘调试 - 如果5秒内没有输入，尝试自动向右移动
+    const idleTime = updatedGameTime - gameState.lastInputTime;
+    if (!hasMovementInput && idleTime > 5000 && updatedGameTime % 1000 < normalizedDeltaTime) {
+      console.log("长时间无输入，尝试模拟键盘输入测试");
+      // 随机选择一个方向自动移动一下
+      const directions = ['w', 'a', 's', 'd'];
+      const randomDir = directions[Math.floor(Math.random() * directions.length)];
+      
+      switch(randomDir) {
+        case 'w':
+          playerY -= 50;
+          break;
+        case 'a':
+          playerX -= 50;
+          break;
+        case 's':
+          playerY += 50;
+          break;
+        case 'd':
+          playerX += 50;
+          break;
+      }
+      
+      console.log(`自动测试移动: ${randomDir}方向`);
     }
 
     // 限制玩家在画布内
@@ -350,73 +381,55 @@ const SurvivorGame: React.FC = () => {
     playerX = Math.max(gameState.player.width / 2, Math.min(playerX, canvasWidth - gameState.player.width / 2));
     playerY = Math.max(gameState.player.height / 2, Math.min(playerY, canvasHeight - gameState.player.height / 2));
 
-    // 生成敌人
+    // 生成敌人 - 确保新生成的敌人足够大
     let updatedEnemies = [...gameState.enemies];
+    
+    // 如果没有敌人，强制生成至少一个敌人
+    const shouldForceSpawnEnemy = updatedEnemies.length === 0;
     
     // 增加敌人生成速率，每秒最多生成3个敌人
     const enemySpawnRate = 1000 / Math.min(3, 1 + Math.floor(updatedGameTime / 10000));
     
     // 如果距离上次生成敌人的时间大于生成速率，则生成新敌人
-    if (updatedGameTime % enemySpawnRate < normalizedDeltaTime || updatedEnemies.length === 0) {
-      console.log('生成敌人');
+    if (shouldForceSpawnEnemy || updatedGameTime % enemySpawnRate < normalizedDeltaTime) {
+      // 可视区域偏移量，确保生成在屏幕边缘稍微外一点
+      const offset = 100;
+      
+      // 确定生成位置
       const spawnEdge = Math.floor(Math.random() * 4); // 0: 上, 1: 右, 2: 下, 3: 左
       let enemyX = 0;
       let enemyY = 0;
       
-      // 可视区域偏移量，确保生成在屏幕边缘稍微外一点
-      const offset = 100;
-      
       switch (spawnEdge) {
-        case 0: // 上
+        case 0: // 上边界
           enemyX = Math.random() * canvasWidth;
           enemyY = -offset;
           break;
-        case 1: // 右
+        case 1: // 右边界
           enemyX = canvasWidth + offset;
           enemyY = Math.random() * canvasHeight;
           break;
-        case 2: // 下
+        case 2: // 下边界
           enemyX = Math.random() * canvasWidth;
           enemyY = canvasHeight + offset;
           break;
-        case 3: // 左
+        case 3: // 左边界
           enemyX = -offset;
           enemyY = Math.random() * canvasHeight;
           break;
       }
       
-      // 敌人类型随时间变化
-      const enemyTypes = ['basic'];
-      if (updatedGameTime > 60000) enemyTypes.push('fast');
-      if (updatedGameTime > 120000) enemyTypes.push('tank');
+      // 选择敌人类型
+      const enemyType = 'basic'; // 简化为只用一种敌人类型进行测试
       
-      const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+      // 增大敌人尺寸，使其更明显
+      const enemyWidth = 60;  // 大尺寸敌人
+      const enemyHeight = 60;
+      const enemyHealth = 50;
+      const enemySpeed = 2;
       
-      // 敌人属性根据类型定义 - 增大敌人尺寸和增加伤害
-      let enemyHealth = 30;
-      let enemySpeed = 2;  // 增加基础速度
-      let enemyDamage = 10;
-      let experienceValue = 10;
-      let enemyWidth = 40;  // 增大敌人尺寸
-      let enemyHeight = 40;
-      
-      if (enemyType === 'fast') {
-        enemyHealth = 20;
-        enemySpeed = 3;  // 更快的速度
-        enemyDamage = 5;
-        experienceValue = 15;
-        enemyWidth = 30;  // 较小但更快
-        enemyHeight = 30;
-      } else if (enemyType === 'tank') {
-        enemyHealth = 100;
-        enemySpeed = 1;
-        enemyDamage = 20;
-        experienceValue = 30;
-        enemyWidth = 50;  // 更大更强
-        enemyHeight = 50;
-      }
-      
-      updatedEnemies.push({
+      // 生成并添加敌人
+      const newEnemy = {
         id: Date.now() + Math.random(),
         x: enemyX,
         y: enemyY,
@@ -425,255 +438,40 @@ const SurvivorGame: React.FC = () => {
         health: enemyHealth,
         maxHealth: enemyHealth,
         speed: enemySpeed,
-        damage: enemyDamage,
+        damage: 10,
         type: enemyType,
-        experienceValue,
+        experienceValue: 10,
+      };
+      
+      updatedEnemies.push(newEnemy);
+      console.log('生成新敌人:', {
+        position: { x: enemyX, y: enemyY },
+        size: { width: enemyWidth, height: enemyHeight },
+        type: enemyType
       });
     }
 
-    // 更新敌人位置和行为
+    // 更新敌人位置 - 朝玩家移动
     updatedEnemies = updatedEnemies.map(enemy => {
-      // 计算朝向玩家的方向
+      // 计算到玩家的方向
       const dx = playerX - enemy.x;
       const dy = playerY - enemy.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       
-      // 归一化方向向量
-      const normalizedDx = dx / distance;
-      const normalizedDy = dy / distance;
+      // 确保不会除以零
+      const normalizedDx = distance > 0 ? dx / distance : 0;
+      const normalizedDy = distance > 0 ? dy / distance : 0;
       
-      // 更新敌人位置
+      // 更新敌人位置 - 使用deltaTime确保在不同帧率下速度一致
+      const newX = enemy.x + normalizedDx * enemy.speed * (normalizedDeltaTime / 16);
+      const newY = enemy.y + normalizedDy * enemy.speed * (normalizedDeltaTime / 16);
+      
       return {
         ...enemy,
-        x: enemy.x + normalizedDx * enemy.speed * (normalizedDeltaTime / 16),
-        y: enemy.y + normalizedDy * enemy.speed * (normalizedDeltaTime / 16),
+        x: newX,
+        y: newY
       };
     });
-
-    // 发射子弹
-    let updatedBullets = [...gameState.bullets];
-    
-    // 对每个武器
-    const updatedActiveWeapons = gameState.activeWeapons.map(weapon => {
-      const currentTime = updatedGameTime;
-      
-      // 检查武器是否可以发射
-      if (currentTime - weapon.lastFired >= weapon.fireRate) {
-        console.log('尝试发射子弹');
-        
-        // 修改发射逻辑，不需要敌人也能发射子弹
-        // 如果有敌人，瞄准最近的敌人；如果没有敌人，朝鼠标方向或固定方向发射
-        let targetX = playerX;
-        let targetY = playerY - 100; // 默认朝上发射
-        
-        // 找到最近的敌人
-        if (updatedEnemies.length > 0) {
-          let closestEnemy = null;
-          let closestDistance = Infinity;
-          
-          for (const enemy of updatedEnemies) {
-            const dx = enemy.x - playerX;
-            const dy = enemy.y - playerY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closestEnemy = enemy;
-            }
-          }
-          
-          if (closestEnemy) {
-            targetX = closestEnemy.x;
-            targetY = closestEnemy.y;
-          }
-        }
-        
-        // 根据武器类型创建子弹
-        for (let i = 0; i < weapon.projectileCount; i++) {
-          // 计算子弹方向
-          let angle = Math.atan2(targetY - playerY, targetX - playerX);
-          
-          // 如果有扩散，添加随机角度
-          if (weapon.projectileSpread > 0) {
-            angle += (Math.random() - 0.5) * weapon.projectileSpread * Math.PI / 180;
-          }
-          
-          // 增大子弹半径
-          const bulletRadius = 8; // 比之前的5更大
-          
-          updatedBullets.push({
-            id: Date.now() + Math.random(),
-            x: playerX,
-            y: playerY,
-            targetX: playerX + Math.cos(angle) * 1000, // 目标点
-            targetY: playerY + Math.sin(angle) * 1000,
-            speed: weapon.speed,
-            damage: weapon.damage,
-            radius: bulletRadius,
-            color: getWeaponColor(weapon.type),
-            type: weapon.type,
-          });
-          
-          // 添加射击效果（视觉反馈）
-          // 可以在这里添加声音或其他视觉效果
-        }
-        
-        return {
-          ...weapon,
-          lastFired: currentTime,
-        };
-      }
-      
-      return weapon;
-    });
-
-    // 更新子弹位置
-    updatedBullets = updatedBullets.map(bullet => {
-      // 计算朝向目标的方向
-      const dx = bullet.targetX - bullet.x;
-      const dy = bullet.targetY - bullet.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      // 归一化方向向量
-      const normalizedDx = dx / distance;
-      const normalizedDy = dy / distance;
-      
-      // 更新子弹位置 - 使用deltaTime标准化速度
-      return {
-        ...bullet,
-        x: bullet.x + normalizedDx * bullet.speed * (normalizedDeltaTime / 16),
-        y: bullet.y + normalizedDy * bullet.speed * (normalizedDeltaTime / 16),
-      };
-    });
-
-    // 移除超出范围的子弹
-    updatedBullets = updatedBullets.filter(bullet => {
-      return bullet.x > -100 && bullet.x < window.innerWidth + 100 &&
-             bullet.y > -100 && bullet.y < window.innerHeight + 100;
-    });
-
-    // 检测子弹与敌人的碰撞
-    let updatedPickups = [...gameState.pickups];
-    let updatedScore = gameState.score;
-    let updatedPlayerExperience = gameState.player.experience;
-    
-    for (let i = updatedBullets.length - 1; i >= 0; i--) {
-      const bullet = updatedBullets[i];
-      
-      for (let j = updatedEnemies.length - 1; j >= 0; j--) {
-        const enemy = updatedEnemies[j];
-        
-        // 简单的矩形碰撞检测
-        const bulletLeft = bullet.x - bullet.radius;
-        const bulletRight = bullet.x + bullet.radius;
-        const bulletTop = bullet.y - bullet.radius;
-        const bulletBottom = bullet.y + bullet.radius;
-        
-        const enemyLeft = enemy.x - enemy.width / 2;
-        const enemyRight = enemy.x + enemy.width / 2;
-        const enemyTop = enemy.y - enemy.height / 2;
-        const enemyBottom = enemy.y + enemy.height / 2;
-        
-        if (bulletRight > enemyLeft && bulletLeft < enemyRight &&
-            bulletBottom > enemyTop && bulletTop < enemyBottom) {
-          
-          // 减少敌人生命值
-          updatedEnemies[j] = {
-            ...enemy,
-            health: enemy.health - bullet.damage,
-          };
-          
-          // 移除子弹，除非是穿透型
-          if (bullet.type !== 'piercing') {
-            updatedBullets.splice(i, 1);
-          }
-          
-          // 如果敌人被杀死
-          if (updatedEnemies[j].health <= 0) {
-            // 生成经验值掉落
-            updatedPickups.push({
-              id: Date.now() + Math.random(),
-              x: enemy.x,
-              y: enemy.y,
-              radius: 10,
-              type: 'experience',
-              value: enemy.experienceValue,
-            });
-            
-            updatedScore += enemy.experienceValue;
-            updatedEnemies.splice(j, 1);
-          }
-          
-          break;
-        }
-      }
-    }
-
-    // 检测玩家与敌人的碰撞
-    let updatedPlayerHealth = gameState.player.health;
-    
-    for (let i = updatedEnemies.length - 1; i >= 0; i--) {
-      const enemy = updatedEnemies[i];
-      
-      // 简单的矩形碰撞检测
-      const playerLeft = playerX - gameState.player.width / 2;
-      const playerRight = playerX + gameState.player.width / 2;
-      const playerTop = playerY - gameState.player.height / 2;
-      const playerBottom = playerY + gameState.player.height / 2;
-      
-      const enemyLeft = enemy.x - enemy.width / 2;
-      const enemyRight = enemy.x + enemy.width / 2;
-      const enemyTop = enemy.y - enemy.height / 2;
-      const enemyBottom = enemy.y + enemy.height / 2;
-      
-      if (playerRight > enemyLeft && playerLeft < enemyRight &&
-          playerBottom > enemyTop && playerTop < enemyBottom) {
-        
-        // 玩家受到伤害
-        updatedPlayerHealth -= enemy.damage * normalizedDeltaTime / 1000;
-      }
-    }
-
-    // 检测玩家与掉落物的碰撞
-    for (let i = updatedPickups.length - 1; i >= 0; i--) {
-      const pickup = updatedPickups[i];
-      
-      // 计算距离
-      const dx = playerX - pickup.x;
-      const dy = playerY - pickup.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      // 吸收范围 (玩家大小 + 掉落物大小 + 额外范围)
-      const pickupRange = gameState.player.width / 2 + pickup.radius + 20;
-      
-      if (distance < pickupRange) {
-        // 根据掉落物类型处理
-        if (pickup.type === 'experience') {
-          updatedPlayerExperience += pickup.value;
-        }
-        
-        updatedPickups.splice(i, 1);
-      }
-    }
-
-    // 检查玩家是否升级
-    let updatedPlayerLevel = gameState.player.level;
-    let updatedExperienceToNextLevel = gameState.player.experienceToNextLevel;
-    let updatedShowLevelUp = gameState.showLevelUp;
-    let updatedLevelUpOptions = gameState.levelUpOptions;
-    
-    if (updatedPlayerExperience >= updatedExperienceToNextLevel) {
-      updatedPlayerLevel += 1;
-      updatedPlayerExperience -= updatedExperienceToNextLevel;
-      updatedExperienceToNextLevel = Math.floor(100 * Math.pow(1.2, updatedPlayerLevel - 1));
-      updatedShowLevelUp = true;
-      
-      // 生成升级选项
-      updatedLevelUpOptions = generateLevelUpOptions(gameState.activeWeapons, gameState.weaponTypes);
-    }
-
-    // 检查游戏是否结束
-    const updatedIsGameOver = updatedPlayerHealth <= 0;
 
     // 更新游戏状态
     setGameState({
@@ -682,20 +480,11 @@ const SurvivorGame: React.FC = () => {
         ...gameState.player,
         x: playerX,
         y: playerY,
-        health: updatedPlayerHealth,
-        level: updatedPlayerLevel,
-        experience: updatedPlayerExperience,
-        experienceToNextLevel: updatedExperienceToNextLevel,
       },
-      bullets: updatedBullets,
       enemies: updatedEnemies,
-      pickups: updatedPickups,
       gameTime: updatedGameTime,
-      score: updatedScore,
-      isGameOver: updatedIsGameOver,
-      showLevelUp: updatedShowLevelUp,
-      levelUpOptions: updatedLevelUpOptions,
-      activeWeapons: updatedActiveWeapons,
+      // 如果有移动输入，更新最后输入时间
+      lastInputTime: hasMovementInput ? updatedGameTime : gameState.lastInputTime
     });
   };
 
@@ -707,66 +496,55 @@ const SurvivorGame: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // 用于FPS计算的deltaTime变量
-    const deltaTime = 16; // 默认约60fps
-    
     // 清空画布
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 调试模式：绘制网格线和游戏信息
-    const debugMode = true; // 默认开启调试模式
     
     // 绘制背景 - 使用纯色背景，不再使用背景图片
     ctx.fillStyle = '#111111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    if (debugMode) {
-      drawGrid(ctx, canvas.width, canvas.height);
-      drawFPS(ctx, deltaTime);
+    // 绘制网格线（用于调试）
+    drawGrid(ctx, canvas.width, canvas.height);
+    
+    // 绘制玩家和敌人之间的连线，帮助查看目标
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 2;
+    
+    gameState.enemies.forEach(enemy => {
+      // 绘制从玩家到敌人的连线
+      ctx.beginPath();
+      ctx.moveTo(gameState.player.x, gameState.player.y);
+      ctx.lineTo(enemy.x, enemy.y);
+      ctx.stroke();
       
-      // 绘制玩家和敌人之间的连线，帮助查看目标
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      
-      gameState.enemies.forEach(enemy => {
-        ctx.beginPath();
-        ctx.moveTo(gameState.player.x, gameState.player.y);
-        ctx.lineTo(enemy.x, enemy.y);
-        ctx.stroke();
-        
-        // 在敌人位置显示坐标
-        ctx.fillStyle = 'white';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(`(${Math.round(enemy.x)},${Math.round(enemy.y)})`, enemy.x, enemy.y - enemy.height);
-      });
-    }
+      // 显示敌人坐标，帮助调试
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`(${Math.round(enemy.x)},${Math.round(enemy.y)})`, enemy.x, enemy.y - enemy.height);
+    });
 
     // 绘制敌人
     gameState.enemies.forEach((enemy) => {
-      // 绘制敌人图像 - 使用更鲜艳的颜色和更大的尺寸
-      let enemyColor;
-      switch(enemy.type) {
-        case 'basic':
-          enemyColor = '#ff0000'; // 亮红色
-          break;
-        case 'fast':
-          enemyColor = '#00ffff'; // 青色
-          break;
-        case 'tank':
-          enemyColor = '#ff9900'; // 橙色
-          break;
-        default:
-          enemyColor = '#ff00ff'; // 品红色
-      }
-      
       // 绘制敌人外发光效果
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = enemyColor;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#ff3300';
       
-      // 绘制敌人
-      ctx.fillStyle = enemyColor;
+      // 使用明亮的颜色绘制敌人，以增强可见性
+      ctx.fillStyle = enemy.type === 'basic' ? '#ff3300' : '#ff9900';
+      
+      // 绘制敌人 - 放大敌人尺寸以使其更明显
       ctx.fillRect(
+        enemy.x - enemy.width / 2,
+        enemy.y - enemy.height / 2,
+        enemy.width,
+        enemy.height
+      );
+      
+      // 添加敌人的轮廓线以增强可见性
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(
         enemy.x - enemy.width / 2,
         enemy.y - enemy.height / 2,
         enemy.width,
@@ -776,128 +554,62 @@ const SurvivorGame: React.FC = () => {
       // 重置阴影
       ctx.shadowBlur = 0;
 
-      // 添加敌人的轮廓线
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(
-        enemy.x - enemy.width / 2,
-        enemy.y - enemy.height / 2,
-        enemy.width,
-        enemy.height
-      );
-
       // 绘制敌人健康条
       const healthBarWidth = enemy.width;
-      const healthBarHeight = 5;
+      const healthBarHeight = 8;
       const healthPercentage = enemy.health / enemy.maxHealth;
 
       // 背景（灰色）
-      ctx.fillStyle = 'gray';
+      ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
       ctx.fillRect(
         enemy.x - healthBarWidth / 2,
-        enemy.y - enemy.height / 2 - 10,
+        enemy.y - enemy.height / 2 - 15,
         healthBarWidth,
         healthBarHeight
       );
 
       // 前景（红色）
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
       ctx.fillRect(
         enemy.x - healthBarWidth / 2,
-        enemy.y - enemy.height / 2 - 10,
+        enemy.y - enemy.height / 2 - 15,
         healthBarWidth * healthPercentage,
         healthBarHeight
       );
     });
 
-    // 绘制子弹
-    gameState.bullets.forEach((bullet) => {
-      // 子弹发光效果
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = bullet.color;
-      
-      // 绘制子弹 - 增大尺寸并添加外发光
-      ctx.beginPath();
-      ctx.arc(bullet.x, bullet.y, bullet.radius * 2, 0, Math.PI * 2);
-      ctx.fillStyle = bullet.color;
-      ctx.fill();
-      
-      // 添加白色边缘增强可见性
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      
-      // 重置阴影
-      ctx.shadowBlur = 0;
-      
-      // 添加子弹尾迹
-      ctx.globalAlpha = 0.6;
-      const dx = bullet.targetX - bullet.x;
-      const dy = bullet.targetY - bullet.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const normalizedDx = distance ? dx / distance : 0;
-      const normalizedDy = distance ? dy / distance : 0;
-      
-      ctx.beginPath();
-      ctx.moveTo(bullet.x, bullet.y);
-      ctx.lineTo(
-        bullet.x - normalizedDx * bullet.radius * 6,
-        bullet.y - normalizedDy * bullet.radius * 6
-      );
-      ctx.lineWidth = bullet.radius;
-      ctx.strokeStyle = bullet.color;
-      ctx.stroke();
-      
-      ctx.globalAlpha = 1.0;
-    });
-
     // 绘制玩家
-    // 给玩家添加发光效果
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#4CAF50';
+    // 添加玩家发光效果
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#00ff00';
     
-    if (playerImageRef.current) {
-      ctx.drawImage(
-        playerImageRef.current,
-        gameState.player.x - gameState.player.width / 2,
-        gameState.player.y - gameState.player.height / 2,
-        gameState.player.width,
-        gameState.player.height
-      );
-    } else {
-      // 玩家使用更明亮的颜色
-      ctx.fillStyle = '#4CAF50'; // 亮绿色
-      ctx.fillRect(
-        gameState.player.x - gameState.player.width / 2,
-        gameState.player.y - gameState.player.height / 2,
-        gameState.player.width,
-        gameState.player.height
-      );
-      
-      // 添加轮廓以增强可见性
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(
-        gameState.player.x - gameState.player.width / 2,
-        gameState.player.y - gameState.player.height / 2,
-        gameState.player.width,
-        gameState.player.height
-      );
-    }
+    // 绘制玩家 - 使用明亮的颜色，增强可见性
+    ctx.fillStyle = '#00ff00'; // 亮绿色
+    ctx.fillRect(
+      gameState.player.x - gameState.player.width / 2,
+      gameState.player.y - gameState.player.height / 2,
+      gameState.player.width,
+      gameState.player.height
+    );
+    
+    // 添加玩家轮廓
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(
+      gameState.player.x - gameState.player.width / 2,
+      gameState.player.y - gameState.player.height / 2,
+      gameState.player.width,
+      gameState.player.height
+    );
     
     // 重置阴影
     ctx.shadowBlur = 0;
 
-    // 绘制拾取物
-    gameState.pickups.forEach((pickup) => {
-      ctx.beginPath();
-      ctx.arc(pickup.x, pickup.y, pickup.radius, 0, Math.PI * 2);
-      ctx.fillStyle = pickup.type === 'health' ? 'red' : 'yellow';
-      ctx.fill();
-    });
-
     // 绘制UI
     drawUI(ctx);
+    
+    // 绘制调试信息
+    drawDebugInfo(ctx);
   };
 
   // 绘制网格线函数（用于调试）
@@ -923,19 +635,36 @@ const SurvivorGame: React.FC = () => {
     }
   };
 
-  // 绘制FPS（用于调试）
-  const drawFPS = (ctx: CanvasRenderingContext2D, deltaTime: number) => {
-    const fps = deltaTime ? Math.round(1000 / deltaTime) : 0;
-    ctx.fillStyle = 'white';
-    ctx.font = '14px Arial';
-    ctx.fillText(`FPS: ${fps}`, 10, 20);
-    ctx.fillText(`Player: (${Math.round(gameState.player.x)}, ${Math.round(gameState.player.y)})`, 10, 40);
-    ctx.fillText(`Enemies: ${gameState.enemies.length}`, 10, 60);
-    ctx.fillText(`Bullets: ${gameState.bullets.length}`, 10, 80);
-    ctx.fillText(`Score: ${gameState.score}`, 10, 100);
+  // 绘制调试信息
+  const drawDebugInfo = (ctx: CanvasRenderingContext2D) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     
-    // 添加键盘状态显示，帮助调试
-    ctx.fillText(`Keys: ${keyState.w ? 'W' : ''} ${keyState.a ? 'A' : ''} ${keyState.s ? 'S' : ''} ${keyState.d ? 'D' : ''}`, 10, 120);
+    ctx.fillStyle = 'white';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'left';
+    
+    // 基本信息
+    ctx.fillText(`键盘状态: W:${keyState.w ? '✓' : '✗'} A:${keyState.a ? '✓' : '✗'} S:${keyState.s ? '✓' : '✗'} D:${keyState.d ? '✓' : '✗'}`, 20, canvas.height - 120);
+    ctx.fillText(`玩家位置: (${Math.floor(gameState.player.x)}, ${Math.floor(gameState.player.y)})`, 20, canvas.height - 90);
+    ctx.fillText(`敌人数量: ${gameState.enemies.length}`, 20, canvas.height - 60);
+    ctx.fillText(`游戏时间: ${Math.floor(gameState.gameTime / 1000)}秒`, 20, canvas.height - 30);
+    
+    // 敌人详细信息（当敌人数量不为0时）
+    if (gameState.enemies.length > 0) {
+      ctx.textAlign = 'right';
+      ctx.fillText('敌人信息:', canvas.width - 20, 30);
+      
+      gameState.enemies.forEach((enemy, index) => {
+        if (index < 5) { // 最多显示5个敌人信息
+          ctx.fillText(
+            `敌人${index+1}: (${Math.floor(enemy.x)}, ${Math.floor(enemy.y)}) 类型:${enemy.type} 血量:${enemy.health}`,
+            canvas.width - 20,
+            60 + index * 25
+          );
+        }
+      });
+    }
   };
 
   // 添加绘制UI的函数
@@ -1212,6 +941,7 @@ const SurvivorGame: React.FC = () => {
           projectileSpread: 0,
         },
       ],
+      lastInputTime: 0,
     });
   };
 
