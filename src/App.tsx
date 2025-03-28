@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import Home from './pages/Home';
 import MemoryGamePage from './pages/MemoryGamePage';
+import SurvivorGame from './components/game/SurvivorGame';
 import './App.css';
 
 // Create a client
@@ -69,6 +70,7 @@ function App() {
                   windowHeight={windowSize.height} 
                 />
               } />
+              <Route path="/games/survivor" element={<SurvivorGame />} />
             </Routes>
           </main>
         </div>

@@ -20,6 +20,15 @@ const Home: React.FC = () => {
       hot: true
     },
     {
+      id: 'survivor',
+      title: '幸存者',
+      description: '从四面八方袭来的敌人中存活下来，收集经验升级，强化武器。',
+      imageUrl: `${basePath}images/2048-game.jpg`, // 临时使用现有图片
+      path: '/games/survivor',
+      hot: true,
+      new: true
+    },
+    {
       id: 'puzzle',
       title: '拼图挑战',
       description: '移动方块，还原图像。挑战你的空间思维能力。',
@@ -141,9 +150,9 @@ const Home: React.FC = () => {
         backgroundBlendMode: 'overlay'
       }}>
         <div className="banner-content">
-          <h2>欢迎来到React游戏平台</h2>
-          <p>体验现代Web技术构建的有趣游戏</p>
-          <Link to="/games/memory" className="banner-btn">立即开始</Link>
+          <h2>Teacher Feng Game World</h2>
+          <p>Fun and Creative Games for Everyone</p>
+          <Link to="/games/memory" className="banner-btn">Play Now</Link>
         </div>
       </div>
 
